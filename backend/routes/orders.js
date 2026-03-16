@@ -5,10 +5,35 @@ const { orderLimiter } = require('../middleware/rateLimit');
 const { getDeliveryCharge } = require('../services/googlemaps');
 const { createCODTokenLink } = require('../services/razorpay');
 const { isCODBlocked, recordCODAttempt } = require('../services/codRules');
-const { validateStock, reserveStock, releaseReservedStock, finaliseStock } = require('../services/stock');
+const { reserveStock, releaseReservedStock, finaliseStock } = require('../services/stock');
+// Note: validateStock is intentionally not imported — reserveStock's transaction
+// already validates stock atomically, so a separate pre-check would be a
+// redundant double-read that can also return stale results.
 const { processRefund } = require('../services/refund');
 const { incrementShopStrike } = require('../services/shopStrikes');
 const { shopConfig, isShopOpen } = require('../services/shopConfig');
+
+// GET /api/orders/admin/orders — Today's orders (admin only)
+// MUST be defined before /:id so Express doesn't match "admin" as an order ID.
+router.get('/admin/orders', requireAdmin, async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const snapshot = await db
+      .collection('orders')
+      .where('shopId', '==', shopConfig.slug)
+      .where('timestamps.createdAt', '>=', today)
+      .orderBy('timestamps.createdAt', 'desc')
+      .get();
+
+    const orders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    res.json(orders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
 
 // POST /api/orders — Create new order
 router.post('/', orderLimiter, async (req, res) => {
@@ -19,7 +44,7 @@ router.post('/', orderLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields', code: 'INVALID_REQUEST' });
     }
 
-    // Check shop is open (reads from Firestore shopConfig for manual override)
+    // Check shop is open
     const shopDoc = await db.collection('shopConfig').doc(shopConfig.slug).get();
     const manualOpen = shopDoc.exists ? shopDoc.data().isOpen : true;
     if (!isShopOpen(manualOpen)) {
@@ -36,10 +61,7 @@ router.post('/', orderLimiter, async (req, res) => {
     }
 
     // Get delivery charge
-    const quote = await getDeliveryCharge(
-      customer.location.lat,
-      customer.location.lng
-    );
+    const quote = await getDeliveryCharge(customer.location.lat, customer.location.lng);
     if (!quote.withinZone) {
       return res.status(400).json({ error: 'Outside delivery zone', code: 'OUTSIDE_DELIVERY_ZONE' });
     }
@@ -60,23 +82,13 @@ router.post('/', orderLimiter, async (req, res) => {
       }
     }
 
-    // Validate stock before reserving
-    const stockErrors = await validateStock(items);
-    if (stockErrors.length > 0) {
-      return res.status(400).json({
-        error: 'Some items are unavailable',
-        code: 'INSUFFICIENT_STOCK',
-        items: stockErrors,
-      });
-    }
-
-    // Reserve stock atomically
+    // Reserve stock atomically — transaction validates and reserves in one shot
     try {
       await reserveStock(items);
     } catch (err) {
       if (err.message.startsWith('INSUFFICIENT_STOCK')) {
         return res.status(400).json({
-          error: 'Stock changed during checkout, please try again',
+          error: 'Some items are unavailable or out of stock',
           code: 'INSUFFICIENT_STOCK',
         });
       }
@@ -173,7 +185,6 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
     const update = { status };
     if (tsKey) update[`timestamps.${tsKey}`] = new Date();
 
-    // Finalise stock when delivered
     if (status === 'DELIVERED') {
       await finaliseStock(order.items);
     }
@@ -231,13 +242,9 @@ router.post('/:id/cancel', async (req, res) => {
       cancellation: { reason, cancelledBy, feeCharged },
     });
 
-    // Release reserved stock
     await releaseReservedStock(order.items);
-
-    // Process refund if payment was made
     await processRefund(order, feeCharged);
 
-    // Block COD if customer rejected at door
     if (reason === 'rejected_at_door') {
       await recordCODAttempt(order.customer.phone);
     }
@@ -246,27 +253,6 @@ router.post('/:id/cancel', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to cancel order' });
-  }
-});
-
-// GET /api/orders/admin/orders — Today's orders (admin only)
-router.get('/admin/orders', requireAdmin, async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const snapshot = await db
-      .collection('orders')
-      .where('shopId', '==', shopConfig.slug)
-      .where('timestamps.createdAt', '>=', today)
-      .orderBy('timestamps.createdAt', 'desc')
-      .get();
-
-    const orders = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    res.json(orders);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
 

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatMessages from '../components/chat/ChatMessages';
 import QuickReplies from '../components/chat/QuickReplies';
 import WeightSelector from '../components/chat/WeightSelector';
 import ChatInput from '../components/chat/ChatInput';
+import OfflineBanner from '../components/shared/OfflineBanner';
 import useChatStore from '../stores/chatStore';
 import { api } from '../lib/api';
 import { shopConfig } from '../config/shop';
@@ -32,6 +35,17 @@ export default function CustomerPage() {
   const [loading, setLoading] = useState(false);
   const [showWeightSelector, setShowWeightSelector] = useState(false);
   const [inputMode, setInputMode] = useState(INPUT_NONE);
+
+  // Subscribe to shopConfig for live open/close updates
+  useEffect(() => {
+    const ref = doc(db, 'shopConfig', shopConfig.slug);
+    const unsubscribe = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        setShopOpen(snap.data().isOpen !== false);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -514,6 +528,7 @@ export default function CustomerPage() {
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto">
+      <OfflineBanner />
       <ChatHeader shopName={shopConfig.name} isOpen={shopOpen} />
       <ChatMessages messages={store.messages} />
 

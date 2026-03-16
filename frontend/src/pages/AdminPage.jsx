@@ -5,6 +5,7 @@ import { useStock } from '../hooks/useStock';
 import StatsBar from '../components/admin/StatsBar';
 import OrderCard from '../components/admin/OrderCard';
 import StockPanel from '../components/admin/StockPanel';
+import OfflineBanner from '../components/shared/OfflineBanner';
 import { api } from '../lib/api';
 import { shopConfig } from '../config/shop';
 
@@ -142,6 +143,7 @@ function AdminDashboard({ token, onLogout }) {
 
   return (
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
+      <OfflineBanner />
       {/* Top bar */}
       <div className="bg-[#C0451A] text-white px-4 py-3 flex items-center justify-between">
         <div>

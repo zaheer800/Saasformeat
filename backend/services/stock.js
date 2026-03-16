@@ -108,39 +108,4 @@ async function finaliseStock(orderItems) {
   });
 }
 
-/**
- * Read-only check before order creation.
- * Returns array of errors — empty means all good.
- */
-async function validateStock(orderItems) {
-  const errors = [];
-
-  for (const item of orderItems) {
-    const doc = await db.collection('menu').doc(item.menuItemId).get();
-
-    if (!doc.exists) {
-      errors.push({ item: item.name, reason: 'Item not found' });
-      continue;
-    }
-
-    const menuItem = doc.data();
-
-    if (!menuItem.isAvailable) {
-      errors.push({ item: item.name, reason: 'Item is currently unavailable' });
-      continue;
-    }
-
-    const availableGrams = menuItem.stockGrams - menuItem.reservedGrams - menuItem.soldGrams;
-    if (availableGrams < item.weight) {
-      const availableKg = (availableGrams / 1000).toFixed(2);
-      errors.push({
-        item: item.name,
-        reason: `Only ${availableKg} kg available, you requested ${item.weight / 1000} kg`,
-      });
-    }
-  }
-
-  return errors;
-}
-
-module.exports = { reserveStock, releaseReservedStock, finaliseStock, validateStock };
+module.exports = { reserveStock, releaseReservedStock, finaliseStock };
