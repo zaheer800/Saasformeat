@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --color-rust: #C0451A;
+  --color-rust-light: #E8581F;
+  --color-rust-dark: #8B2E0F;
+  --color-gold: #D4A843;
+  --color-shop-cream: #FDF6EC;
+  --color-shop-warm: #F5E6CC;
+
+  --font-display: 'Playfair Display', serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #FDF6EC;
+}
+
+/* Prevent double-tap zoom on buttons */
+button {
+  touch-action: manipulation;
+}
+
+/* Smooth scroll within chat */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
