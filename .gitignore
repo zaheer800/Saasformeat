@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files — never commit real credentials
+.env
+**/.env
+!**/.env.example
+
+# Build outputs
+frontend/dist/
+frontend/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Firebase local emulator data
+.firebase/
+firebase-debug.log
+firestore-debug.log

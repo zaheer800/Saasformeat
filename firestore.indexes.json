@@ -1,0 +1,30 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shopId", "order": "ASCENDING" },
+        { "fieldPath": "timestamps.createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shopId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "timestamps.createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "menu",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shopId", "order": "ASCENDING" },
+        { "fieldPath": "sortOrder", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

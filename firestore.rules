@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// HOW TO DEPLOY:
+//   1. Replace SHOP_SLUG and ADMIN_PHONE below with real values
+//      e.g. SHOP_SLUG → "newfamous"   ADMIN_PHONE → "+919876543210"
+//   2. Run: firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Orders ──────────────────────────────────────────────────────────────
+    // Customers can create orders for this shop only.
+    // Anyone who knows an orderId can read it (ID is unguessable Firestore auto-ID).
+    // All updates go through the backend Admin SDK — never from the client.
+    match /orders/{orderId} {
+      allow create: if
+        request.resource.data.shopId == 'SHOP_SLUG' &&
+        isValidOrder(request.resource.data);
+
+      allow read: if true;
+
+      allow update, delete: if false;
+    }
+
+    // ── Menu ─────────────────────────────────────────────────────────────────
+    match /menu/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Shop config ──────────────────────────────────────────────────────────
+    match /shopConfig/{shopId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Customers (COD block list) ────────────────────────────────────────────
+    // Backend Admin SDK only — never expose to client
+    match /customers/{phone} {
+      allow read, write: if false;
+    }
+
+    // ── Shop strikes ─────────────────────────────────────────────────────────
+    match /shopStrikes/{date} {
+      allow read, write: if false;
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    // Only the registered admin phone number can write admin-only collections
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token.phone_number == 'ADMIN_PHONE';
+    }
+
+    // Basic shape validation on order creation
+    function isValidOrder(data) {
+      return data.keys().hasAll(['customer', 'items', 'payment', 'status', 'shopId']) &&
+             data.items.size() > 0 &&
+             data.status == 'PENDING' &&
+             data.payment.method in ['cod', 'upi'];
+    }
+  }
+}
