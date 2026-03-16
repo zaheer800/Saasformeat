@@ -18,12 +18,13 @@ Before writing any code, read the relevant doc:
 
 | Task | Read |
 |---|---|
-| Understanding the project | `docs/README.md` |
-| Data models, API routes | `docs/01-architecture.md` |
-| React UI, chat flow, admin | `docs/02-frontend.md` |
-| Node.js backend, Express routes | `docs/03-backend.md` |
-| Firebase schema, security rules | `docs/04-firebase.md` |
-| Payments, delivery, deployment, business rules | `docs/05-payments-delivery-deployment-rules.md` |
+| Understanding the project | `README.md` |
+| Data models, API routes | `01-architecture.md` |
+| React UI, chat flow, admin | `02-frontend.md` |
+| Node.js backend, Express routes | `03-backend.md` |
+| Firebase schema, security rules | `04-firebase.md` |
+| Payments, delivery, deployment, business rules | `05-payments-delivery-deployment-rules.md` |
+| API keys, env vars, deploying for a client | `06-keys-and-deployment.md` |
 
 ---
 

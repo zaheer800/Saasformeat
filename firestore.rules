@@ -3,7 +3,9 @@ rules_version = '2';
 // HOW TO DEPLOY:
 //   1. Replace SHOP_SLUG and ADMIN_PHONE below with real values
 //      e.g. SHOP_SLUG → "newfamous"   ADMIN_PHONE → "+919876543210"
-//   2. Run: firebase deploy --only firestore:rules
+//   2. Run: firebase deploy --only firestore:rules,firestore:indexes
+//
+//   Full setup guide: see 06-keys-and-deployment.md → Step 6
 
 service cloud.firestore {
   match /databases/{database}/documents {

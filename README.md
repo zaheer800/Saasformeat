@@ -15,10 +15,8 @@ A **multi-tenant hyperlocal meat shop ordering web app**. Each shop gets their o
 | `02-frontend.md` | React UI — customer chat flow, admin panel |
 | `03-backend.md` | Node.js API — orders, menu, sessions, auth |
 | `04-firebase.md` | Firestore schema, security rules, OTP auth |
-| `05-payments.md` | Razorpay UPI, COD, cancellation fee logic |
-| `06-delivery.md` | Google Maps distance, Rapido API integration |
-| `07-deployment.md` | Vercel + Railway setup, env vars, per-client deploy |
-| `08-business-rules.md` | COD rules, cancellation policy, order states |
+| `05-payments-delivery-deployment-rules.md` | Razorpay, Google Maps, deployment checklist, business rules |
+| `06-keys-and-deployment.md` | **All API keys, env vars, Firebase deploy, step-by-step client onboarding** |
 
 ---
 
