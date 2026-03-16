@@ -34,10 +34,19 @@ export const api = {
 
   getOrder: (orderId) => request(`/api/orders/${orderId}`),
 
+  // Customer cancel (no token needed)
   cancelOrder: (orderId, reason, cancelledBy) =>
     request(`/api/orders/${orderId}/cancel`, {
       method: 'POST',
       body: { reason, cancelledBy },
+    }),
+
+  // Admin cancel (with token — releases stock + handles refund + shop strike)
+  adminCancelOrder: (orderId, reason, token) =>
+    request(`/api/orders/${orderId}/cancel`, {
+      method: 'POST',
+      body: { reason, cancelledBy: 'shop' },
+      headers: { Authorization: `Bearer ${token}` },
     }),
 
   // Admin endpoints

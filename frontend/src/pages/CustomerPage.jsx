@@ -9,12 +9,20 @@ import useChatStore from '../stores/chatStore';
 import { api } from '../lib/api';
 import { shopConfig } from '../config/shop';
 
+const MIN_ORDER = 150;
+
 const CATEGORIES = [
   { value: 'chicken', label: '🐔 Chicken' },
   { value: 'mutton', label: '🐑 Mutton' },
   { value: 'fish', label: '🐟 Fish' },
   { value: 'eggs', label: '🥚 Eggs' },
 ];
+
+// chat input modes
+const INPUT_NONE = null;
+const INPUT_NAME = 'name';
+const INPUT_PHONE = 'phone';
+const INPUT_ADDRESS = 'address';
 
 export default function CustomerPage() {
   const navigate = useNavigate();
@@ -23,6 +31,7 @@ export default function CustomerPage() {
   const [shopOpen, setShopOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showWeightSelector, setShowWeightSelector] = useState(false);
+  const [inputMode, setInputMode] = useState(INPUT_NONE);
 
   useEffect(() => {
     async function init() {
@@ -33,7 +42,6 @@ export default function CustomerPage() {
         ]);
         setMenu(menuData);
         setShopOpen(configData.isOpen);
-
         store.reset();
 
         if (!configData.isOpen) {
@@ -59,6 +67,8 @@ export default function CustomerPage() {
     init();
   }, []);
 
+  // ─── helpers ─────────────────────────────────────────────────────────────
+
   function getAvailableCategories() {
     const available = new Set(menu.filter((i) => i.isAvailable).map((i) => i.category));
     return CATEGORIES.filter((c) => available.has(c.value));
@@ -72,9 +82,26 @@ export default function CustomerPage() {
     return store.cart.reduce((sum, i) => sum + i.totalPrice, 0);
   }
 
+  // ─── geolocation ─────────────────────────────────────────────────────────
+
+  function getGPSLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation not supported'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => reject(new Error('Location denied')),
+        { timeout: 10000 }
+      );
+    });
+  }
+
+  // ─── chat FSM ─────────────────────────────────────────────────────────────
+
   async function handleSelect(opt) {
     if (loading) return;
-
     const { step } = store;
 
     if (step === 'WELCOME') {
@@ -86,11 +113,7 @@ export default function CustomerPage() {
         store.addMessage({ type: 'bot', text: 'Sorry, no items available in this category right now.' });
         return;
       }
-
-      store.addMessage({
-        type: 'bot',
-        text: `Here's our ${opt.label.replace(/^.+\s/, '')} selection:`,
-      });
+      store.addMessage({ type: 'bot', text: `Here's our ${opt.label.replace(/^.+\s/, '')} selection:` });
       store.goToStep('CATEGORY_SELECTED');
       return;
     }
@@ -98,7 +121,6 @@ export default function CustomerPage() {
     if (step === 'CATEGORY_SELECTED') {
       const item = menu.find((i) => i.id === opt.value);
       if (!item) return;
-
       store.addMessage({ type: 'user', text: opt.label });
       store.setSelectedItem(item);
 
@@ -140,19 +162,25 @@ export default function CustomerPage() {
     }
 
     if (step === 'CART_REVIEW') {
-      if (opt.value === 'proceed') {
-        store.addMessage({ type: 'user', text: 'Proceed to order' });
-        store.addMessage({
-          type: 'bot',
-          text: 'Please share your delivery address. You can type it below.',
-        });
-        store.goToStep('ADDRESS_ENTRY');
-        return;
-      }
       if (opt.value === 'add_more') {
         store.addMessage({ type: 'user', text: 'Add more items' });
         store.addMessage({ type: 'bot', text: 'What else would you like?' });
         store.goToStep('WELCOME');
+        return;
+      }
+      if (opt.value === 'proceed') {
+        const total = getCartTotal();
+        if (total < MIN_ORDER) {
+          store.addMessage({
+            type: 'bot',
+            text: `Minimum order is ₹${MIN_ORDER}. Your cart is ₹${total}. Please add more items.`,
+          });
+          return;
+        }
+        store.addMessage({ type: 'user', text: 'Proceed to order' });
+        store.addMessage({ type: 'bot', text: "What's your name?" });
+        setInputMode(INPUT_NAME);
+        store.goToStep('CUSTOMER_NAME');
         return;
       }
     }
@@ -162,7 +190,134 @@ export default function CustomerPage() {
         await placeOrder('cod');
       }
     }
+
+    if (step === 'ORDER_CONFIRM' && opt.value === 'track') {
+      navigate(`/track/${store.orderId}`);
+    }
   }
+
+  // ─── text input handler — routes to the right step ───────────────────────
+
+  async function handleTextInput(text) {
+    if (inputMode === INPUT_NAME) {
+      store.addMessage({ type: 'user', text });
+      store.setCustomerInfo({ ...(store.customerInfo || {}), name: text });
+      store.addMessage({ type: 'bot', text: 'And your phone number? (10 digits)' });
+      setInputMode(INPUT_PHONE);
+      store.goToStep('CUSTOMER_PHONE');
+      return;
+    }
+
+    if (inputMode === INPUT_PHONE) {
+      const digits = text.replace(/\D/g, '');
+      if (digits.length < 10) {
+        store.addMessage({ type: 'bot', text: 'Please enter a valid 10-digit phone number.' });
+        return;
+      }
+      store.addMessage({ type: 'user', text });
+      store.setCustomerInfo({ ...(store.customerInfo || {}), phone: digits });
+
+      store.addMessage({
+        type: 'bot',
+        text: 'Please share your delivery address.\n\nYou can tap the button below to share your live location, or type your address.',
+      });
+      setInputMode(INPUT_ADDRESS);
+      store.goToStep('ADDRESS_ENTRY');
+      return;
+    }
+
+    if (inputMode === INPUT_ADDRESS) {
+      await handleAddressInput(text, null, null);
+    }
+  }
+
+  // ─── GPS location share button ────────────────────────────────────────────
+
+  async function handleShareLocation() {
+    if (loading) return;
+    store.addMessage({ type: 'user', text: '📍 Shared live location' });
+    store.addMessage({ type: 'bot', text: 'Getting your location...' });
+    setLoading(true);
+
+    try {
+      const coords = await getGPSLocation();
+      await handleAddressInput(null, coords.lat, coords.lng);
+    } catch {
+      store.addMessage({
+        type: 'bot',
+        text: 'Could not get your location. Please type your address instead.',
+      });
+      setLoading(false);
+    }
+  }
+
+  // ─── address + delivery quote ─────────────────────────────────────────────
+
+  async function handleAddressInput(addressText, lat, lng) {
+    if (addressText) {
+      store.addMessage({ type: 'user', text: addressText });
+    }
+
+    const currentInfo = store.customerInfo || {};
+    let resolvedLat = lat;
+    let resolvedLng = lng;
+
+    // If no GPS coords, try browser geolocation silently
+    if (!resolvedLat || !resolvedLng) {
+      try {
+        const coords = await getGPSLocation();
+        resolvedLat = coords.lat;
+        resolvedLng = coords.lng;
+      } catch {
+        // Geolocation denied — use shop's area as rough fallback
+        // The backend will still calculate based on actual coords if available
+        resolvedLat = shopConfig.lat;
+        resolvedLng = shopConfig.lng;
+      }
+    }
+
+    store.setCustomerInfo({
+      ...currentInfo,
+      address: addressText || currentInfo.address || 'Live location',
+      lat: resolvedLat,
+      lng: resolvedLng,
+    });
+
+    store.addMessage({ type: 'bot', text: 'Calculating delivery charge...' });
+    setLoading(true);
+    setInputMode(INPUT_NONE);
+
+    try {
+      const quote = await api.getDeliveryQuote(resolvedLat, resolvedLng);
+
+      if (!quote.withinZone) {
+        store.addMessage({
+          type: 'bot',
+          text: 'Sorry, your address is outside our delivery zone (max 8 km). We cannot deliver there.',
+        });
+        setInputMode(INPUT_ADDRESS);
+        setLoading(false);
+        return;
+      }
+
+      store.setDeliveryQuote(quote);
+      store.addMessage({
+        type: 'bot',
+        text: `Delivery charge: ₹${quote.charge} (${quote.distanceKm} km, ~${quote.durationMinutes} min)\n\nPayment method: COD only. A ₹20 token advance is required to confirm your order.`,
+      });
+      store.goToStep('PAYMENT_SELECT');
+    } catch {
+      store.addMessage({
+        type: 'bot',
+        text: 'Could not calculate delivery charge. Please try again.',
+      });
+      setInputMode(INPUT_ADDRESS);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ─── weight selection ─────────────────────────────────────────────────────
 
   function handleWeightSelect(grams) {
     const { selectedItem, selectedCut } = store;
@@ -190,7 +345,6 @@ export default function CustomerPage() {
     });
 
     const cartTotal = getCartTotal() + totalPrice;
-
     store.addMessage({
       type: 'bot',
       text: `Added! ${label} ${selectedItem.name}${cutLabel} — ₹${totalPrice}\n\nCart total: ₹${cartTotal}`,
@@ -198,6 +352,8 @@ export default function CustomerPage() {
 
     store.goToStep('WEIGHT_SELECTED');
   }
+
+  // ─── cart display ─────────────────────────────────────────────────────────
 
   function showCart() {
     const { cart } = store;
@@ -213,49 +369,15 @@ export default function CustomerPage() {
     });
     cartText += `\nTotal: ₹${total}`;
 
+    if (total < MIN_ORDER) {
+      cartText += `\n\n⚠ Minimum order is ₹${MIN_ORDER}. Please add ₹${MIN_ORDER - total} more.`;
+    }
+
     store.addMessage({ type: 'bot', text: cartText });
     store.goToStep('CART_REVIEW');
   }
 
-  async function handleAddressInput(address) {
-    store.addMessage({ type: 'user', text: address });
-    store.setCustomerInfo({ ...(store.customerInfo || {}), address });
-
-    store.addMessage({ type: 'bot', text: 'Calculating delivery charge...' });
-    setLoading(true);
-
-    try {
-      // Use shop lat/lng as fallback location for now
-      // In a real implementation, geocode the address first
-      const quote = await api.getDeliveryQuote(
-        store.customerInfo?.lat || shopConfig.lat + 0.01,
-        store.customerInfo?.lng || shopConfig.lng + 0.01
-      );
-
-      if (!quote.withinZone) {
-        store.addMessage({
-          type: 'bot',
-          text: 'Sorry, your address is outside our delivery zone (max 8 km). We cannot deliver there.',
-        });
-        setLoading(false);
-        return;
-      }
-
-      store.setDeliveryQuote(quote);
-      store.addMessage({
-        type: 'bot',
-        text: `Delivery charge: ₹${quote.charge} (${quote.distanceKm} km, ~${quote.durationMinutes} min)\n\nWould you like to pay COD? A ₹20 token advance is required to confirm your order.`,
-      });
-      store.goToStep('PAYMENT_SELECT');
-    } catch {
-      store.addMessage({
-        type: 'bot',
-        text: 'Could not calculate delivery charge. Please try again.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
+  // ─── place order ──────────────────────────────────────────────────────────
 
   async function placeOrder(paymentMethod) {
     const { cart, customerInfo, deliveryQuote } = store;
@@ -276,12 +398,12 @@ export default function CustomerPage() {
 
       const result = await api.createOrder({
         customer: {
-          name: customerInfo?.name || 'Customer',
-          phone: customerInfo?.phone || '',
-          address: customerInfo?.address || '',
+          name: customerInfo.name,
+          phone: customerInfo.phone,
+          address: customerInfo.address,
           location: {
-            lat: customerInfo?.lat || shopConfig.lat + 0.01,
-            lng: customerInfo?.lng || shopConfig.lng + 0.01,
+            lat: customerInfo.lat,
+            lng: customerInfo.lng,
           },
         },
         items,
@@ -293,11 +415,7 @@ export default function CustomerPage() {
 
       store.addMessage({
         type: 'order_card',
-        order: {
-          orderId: result.orderId,
-          items: cart,
-          pricing: result.pricing,
-        },
+        order: { orderId: result.orderId, items: cart, pricing: result.pricing },
       });
 
       if (result.tokenPaymentUrl) {
@@ -306,10 +424,7 @@ export default function CustomerPage() {
           text: `Order placed! Please pay ₹20 token advance to confirm:\n\n${result.tokenPaymentUrl}\n\nYour order will be processed once the token is paid.`,
         });
       } else {
-        store.addMessage({
-          type: 'bot',
-          text: `Order placed successfully! Order ID: ${result.orderId}`,
-        });
+        store.addMessage({ type: 'bot', text: `Order placed! ID: ${result.orderId}` });
       }
 
       store.goToStep('ORDER_CONFIRM');
@@ -323,14 +438,13 @@ export default function CustomerPage() {
     }
   }
 
+  // ─── quick replies ────────────────────────────────────────────────────────
+
   function getQuickReplies() {
     const { step, selectedCategory } = store;
-
     if (!shopOpen) return [];
 
-    if (step === 'WELCOME') {
-      return getAvailableCategories();
-    }
+    if (step === 'WELCOME') return getAvailableCategories();
 
     if (step === 'CATEGORY_SELECTED') {
       return getItemsForCategory(selectedCategory).map((item) => ({
@@ -354,10 +468,19 @@ export default function CustomerPage() {
     }
 
     if (step === 'CART_REVIEW') {
+      const total = getCartTotal();
       return [
         { value: 'add_more', label: '+ Add more items' },
-        { value: 'proceed', label: '✓ Proceed to order' },
+        {
+          value: 'proceed',
+          label: '✓ Proceed to order',
+          disabled: total < MIN_ORDER,
+        },
       ];
+    }
+
+    if (step === 'ADDRESS_ENTRY') {
+      return [{ value: 'gps', label: '📍 Share my location' }];
     }
 
     if (step === 'PAYMENT_SELECT') {
@@ -371,17 +494,23 @@ export default function CustomerPage() {
     return [];
   }
 
-  const replies = getQuickReplies();
-  const showInput = store.step === 'ADDRESS_ENTRY';
-  const showWeights = showWeightSelector && store.step === 'CUT_SELECTED' && store.selectedItem;
-
-  function handleTrackOrder(opt) {
-    if (opt.value === 'track' && store.orderId) {
-      navigate(`/track/${store.orderId}`);
+  function handleQuickReply(opt) {
+    if (opt.value === 'gps') {
+      handleShareLocation();
     } else {
       handleSelect(opt);
     }
   }
+
+  // ─── render ───────────────────────────────────────────────────────────────
+
+  const replies = getQuickReplies();
+  const showWeights = showWeightSelector && store.step === 'CUT_SELECTED' && store.selectedItem;
+  const showTextInput = inputMode !== INPUT_NONE;
+  const inputPlaceholder =
+    inputMode === INPUT_NAME ? 'Your name...' :
+    inputMode === INPUT_PHONE ? 'Phone number...' :
+    'Type your address...';
 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto">
@@ -394,12 +523,12 @@ export default function CustomerPage() {
 
       {showWeights && <WeightSelector item={store.selectedItem} onSelect={handleWeightSelect} />}
       {!showWeights && (
-        <QuickReplies options={replies} onSelect={handleTrackOrder} disabled={loading} />
+        <QuickReplies options={replies} onSelect={handleQuickReply} disabled={loading} />
       )}
       <ChatInput
-        onSend={handleAddressInput}
-        disabled={!showInput}
-        placeholder="Type your delivery address..."
+        onSend={handleTextInput}
+        disabled={!showTextInput || loading}
+        placeholder={inputPlaceholder}
       />
     </div>
   );

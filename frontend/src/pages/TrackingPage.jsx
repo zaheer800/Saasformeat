@@ -3,6 +3,9 @@ import { useParams } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { shopConfig } from '../config/shop';
+import { api } from '../lib/api';
+
+const FREE_CANCEL_MINUTES = 2;
 
 const STATUS_STEPS = ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'DISPATCHED', 'DELIVERED'];
 
@@ -30,20 +33,36 @@ export default function TrackingPage() {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     if (!orderId) return;
-
     const ref = doc(db, 'orders', orderId);
     const unsubscribe = onSnapshot(ref, (snap) => {
-      if (snap.exists()) {
-        setOrder({ id: snap.id, ...snap.data() });
-      }
+      if (snap.exists()) setOrder({ id: snap.id, ...snap.data() });
       setLoading(false);
     });
-
     return unsubscribe;
   }, [orderId]);
+
+  // Tick every 15s to re-evaluate whether free cancel window is still open
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  async function handleCancel() {
+    if (!window.confirm('Cancel this order?')) return;
+    setCancelling(true);
+    try {
+      await api.cancelOrder(orderId, 'customer_cancelled', 'customer');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -62,7 +81,30 @@ export default function TrackingPage() {
   }
 
   const isCancelled = order.status === 'CANCELLED';
+  const isCompleted = order.status === 'DELIVERED';
   const currentIndex = STATUS_STEPS.indexOf(order.status);
+
+  // Whether customer can cancel: PENDING always free; ACCEPTED within 2 min free
+  const canCancel = order.status === 'PENDING' || order.status === 'ACCEPTED';
+
+  let cancelLabel = 'Cancel order (free)';
+  let cancelFeeWarning = null;
+
+  if (order.status === 'ACCEPTED') {
+    const acceptedAt = order.timestamps?.acceptedAt?.toDate?.()
+      || (order.timestamps?.acceptedAt ? new Date(order.timestamps.acceptedAt) : null);
+
+    if (acceptedAt) {
+      const minutesSince = (now - acceptedAt.getTime()) / 1000 / 60;
+      if (minutesSince >= FREE_CANCEL_MINUTES) {
+        cancelLabel = 'Cancel order (₹50 fee)';
+        cancelFeeWarning = 'Prep has started. A ₹50 cancellation fee applies.';
+      } else {
+        const remaining = Math.max(0, Math.ceil(FREE_CANCEL_MINUTES - minutesSince));
+        cancelLabel = `Cancel order (free for ~${remaining} more min)`;
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#FDF6EC] max-w-md mx-auto px-4 py-6">
@@ -71,7 +113,7 @@ export default function TrackingPage() {
         <h1 className="text-xl font-bold text-gray-900 mt-0.5">Order #{orderId.slice(-6)}</h1>
       </div>
 
-      {/* Status */}
+      {/* Status card */}
       <div
         className={`rounded-2xl p-5 mb-6 text-center ${
           isCancelled ? 'bg-red-50' : 'bg-white shadow-sm'
@@ -80,7 +122,10 @@ export default function TrackingPage() {
         <div className="text-4xl mb-2">{STATUS_ICONS[order.status]}</div>
         <div className="font-semibold text-gray-900">{STATUS_LABELS[order.status]}</div>
         {isCancelled && order.cancellation && (
-          <div className="text-sm text-red-500 mt-1">{order.cancellation.reason}</div>
+          <div className="text-sm text-red-500 mt-1">
+            {order.cancellation.reason?.replace(/_/g, ' ')}
+            {order.cancellation.feeCharged > 0 && ` · ₹${order.cancellation.feeCharged} fee charged`}
+          </div>
         )}
       </div>
 
@@ -114,8 +159,8 @@ export default function TrackingPage() {
         </div>
       )}
 
-      {/* Order items */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
+      {/* Order summary */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm mb-4">
         <h2 className="font-semibold text-gray-900 mb-3">Order Summary</h2>
         <div className="space-y-2">
           {order.items?.map((item, i) => (
@@ -151,6 +196,25 @@ export default function TrackingPage() {
           </div>
         </div>
       </div>
+
+      {/* Cancel button — only when cancellable */}
+      {canCancel && (
+        <div className="space-y-2">
+          {cancelFeeWarning && (
+            <div className="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2">
+              ⚠ {cancelFeeWarning}
+            </div>
+          )}
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="w-full min-h-[48px] bg-white border border-red-300 text-red-500 rounded-xl
+                       text-sm font-medium active:bg-red-50 disabled:opacity-40"
+          >
+            {cancelling ? 'Cancelling...' : cancelLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

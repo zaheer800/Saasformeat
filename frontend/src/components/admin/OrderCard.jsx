@@ -29,6 +29,19 @@ export default function OrderCard({ order, onRefresh }) {
     }
   }
 
+  async function rejectOrder() {
+    setLoading(true);
+    try {
+      // Must use cancel endpoint — releases reserved stock and handles refund
+      await api.adminCancelOrder(order.id, 'rejected_by_shop', token);
+      onRefresh?.();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function assignOwnBoy() {
     setLoading(true);
     try {
@@ -113,7 +126,7 @@ export default function OrderCard({ order, onRefresh }) {
             ✅ Accept
           </button>
           <button
-            onClick={() => updateStatus('CANCELLED')}
+            onClick={rejectOrder}
             disabled={loading}
             className="flex-1 min-h-[44px] bg-red-100 text-red-600 rounded-xl text-sm font-semibold
                        active:bg-red-200 disabled:opacity-40"
