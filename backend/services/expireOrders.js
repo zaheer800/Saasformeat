@@ -61,4 +61,4 @@ function startExpiryLoop() {
   setInterval(expireStaleOrders, CHECK_INTERVAL_MS);
 }
 
-module.exports = { startExpiryLoop };
+module.exports = { startExpiryLoop, expireStaleOrders };

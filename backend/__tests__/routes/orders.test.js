@@ -79,6 +79,12 @@ jest.mock('../../services/expireOrders', () => ({
   startExpiryLoop: jest.fn(),
 }));
 
+// Disable rate limiting in tests
+jest.mock('../../middleware/rateLimit', () => ({
+  rateLimiter: (req, res, next) => next(),
+  orderLimiter: (req, res, next) => next(),
+}));
+
 // Load app after all mocks are set up
 const app = require('../../app');
 

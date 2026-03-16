@@ -21,7 +21,7 @@ const useChatStore = create((set, get) => ({
 
   addToCart: (item) =>
     set((state) => ({
-      cart: [...state.cart, { ...item, cartId: Date.now() }],
+      cart: [...state.cart, { ...item, cartId: Date.now() + Math.random() }],
     })),
 
   removeFromCart: (cartId) =>

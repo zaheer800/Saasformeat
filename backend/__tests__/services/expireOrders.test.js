@@ -1,67 +1,49 @@
 /**
- * Tests for backend/services/expireOrders.js (expireStaleOrders internals)
- *
- * We export startExpiryLoop only, so we test by calling it in a controlled way.
- * The key observable behaviour:
- *   - Stale PENDING orders are marked CANCELLED
- *   - releaseReservedStock is called for each stale order
- *   - processRefund is called for each stale order
- *   - Orders that are not stale are untouched
- *   - Query failures are swallowed (no unhandled rejection)
+ * Tests for backend/services/expireOrders.js
  */
 
 const ORDER_ITEMS = [{ menuItemId: 'chicken', name: 'Chicken', weight: 500 }];
 
 // ─── Mock dependencies ────────────────────────────────────────────────────────
 
-let mockDocUpdate;
-let mockQueryGet;
-let mockSnapshot;
-
-jest.mock('../../services/firebase', () => {
-  mockDocUpdate = jest.fn().mockResolvedValue();
-  mockQueryGet = jest.fn();
-
-  // Build chainable Firestore query mock
-  const chain = {
-    where: jest.fn().mockReturnThis(),
-    get: (...a) => mockQueryGet(...a),
-  };
-
-  return {
-    db: {
-      collection: jest.fn(() => chain),
-    },
-    admin: { firestore: { FieldValue: {} } },
-  };
-});
-
-const mockReleaseReservedStock = jest.fn().mockResolvedValue();
-const mockProcessRefund = jest.fn().mockResolvedValue();
+jest.mock('../../services/firebase', () => ({
+  db: {
+    collection: jest.fn((name) => ({
+      where: jest.fn().mockReturnThis(),
+      get: jest.fn(),
+    })),
+  },
+  admin: { firestore: { FieldValue: {} } },
+}));
 
 jest.mock('../../services/stock', () => ({
-  releaseReservedStock: (...a) => mockReleaseReservedStock(...a),
+  releaseReservedStock: jest.fn().mockResolvedValue(),
 }));
 
 jest.mock('../../services/refund', () => ({
-  processRefund: (...a) => mockProcessRefund(...a),
+  processRefund: jest.fn().mockResolvedValue(),
 }));
 
 jest.mock('../../services/shopConfig', () => ({
   shopConfig: { slug: 'test-shop' },
 }));
 
-// We need to reach the internal expireStaleOrders function.
-// Since it's not exported, we re-require the module and trigger via startExpiryLoop
-// with fake timers so the setInterval fires synchronously.
-const { startExpiryLoop } = require('../../services/expireOrders');
+// Flush all pending microtasks (awaits all queued promises)
+const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
+
+const { expireStaleOrders } = require('../../services/expireOrders');
+const { db } = require('../../services/firebase');
+const { releaseReservedStock } = require('../../services/stock');
+const { processRefund } = require('../../services/refund');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeStaleOrderDoc(id, items = ORDER_ITEMS) {
   return {
     id,
-    ref: { update: mockDocUpdate },
+    ref: {
+      update: jest.fn().mockResolvedValue(),
+    },
     data: () => ({
       items,
       timestamps: { createdAt: { toDate: () => new Date(Date.now() - 15 * 60 * 1000) } },
@@ -71,30 +53,27 @@ function makeStaleOrderDoc(id, items = ORDER_ITEMS) {
   };
 }
 
+function mockQuery(docs) {
+  db.collection.mockReturnValue({
+    where: jest.fn().mockReturnThis(),
+    get: jest.fn().mockResolvedValue({ empty: docs.length === 0, docs }),
+  });
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('expireStaleOrders (via startExpiryLoop)', () => {
+describe('expireStaleOrders', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
     jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   test('cancels a stale PENDING order and releases stock', async () => {
     const staleDoc = makeStaleOrderDoc('order-stale-1');
-    mockQueryGet.mockResolvedValue({ empty: false, docs: [staleDoc] });
+    mockQuery([staleDoc]);
 
-    // startExpiryLoop calls expireStaleOrders immediately
-    startExpiryLoop();
-    // Let the microtask queue drain
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await expireStaleOrders();
 
-    expect(mockDocUpdate).toHaveBeenCalledWith(
+    expect(staleDoc.ref.update).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'CANCELLED',
         'pricing.cancellationFee': 0,
@@ -104,40 +83,37 @@ describe('expireStaleOrders (via startExpiryLoop)', () => {
         }),
       })
     );
-    expect(mockReleaseReservedStock).toHaveBeenCalledWith(ORDER_ITEMS);
-    expect(mockProcessRefund).toHaveBeenCalled();
+    expect(releaseReservedStock).toHaveBeenCalledWith(ORDER_ITEMS);
+    expect(processRefund).toHaveBeenCalled();
   });
 
   test('does nothing when snapshot is empty', async () => {
-    mockQueryGet.mockResolvedValue({ empty: true, docs: [] });
+    mockQuery([]);
 
-    startExpiryLoop();
-    await Promise.resolve();
-    await Promise.resolve();
+    await expireStaleOrders();
 
-    expect(mockDocUpdate).not.toHaveBeenCalled();
-    expect(mockReleaseReservedStock).not.toHaveBeenCalled();
+    expect(releaseReservedStock).not.toHaveBeenCalled();
+    expect(processRefund).not.toHaveBeenCalled();
   });
 
   test('swallows Firestore query error without throwing', async () => {
-    mockQueryGet.mockRejectedValue(new Error('Firestore unavailable'));
+    db.collection.mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      get: jest.fn().mockRejectedValue(new Error('Firestore unavailable')),
+    });
 
-    startExpiryLoop();
-    // Should not throw
-    await expect(Promise.resolve()).resolves.not.toThrow();
+    await expect(expireStaleOrders()).resolves.not.toThrow();
   });
 
   test('processes multiple stale orders', async () => {
     const docs = [makeStaleOrderDoc('order-1'), makeStaleOrderDoc('order-2')];
-    mockQueryGet.mockResolvedValue({ empty: false, docs });
+    mockQuery(docs);
 
-    startExpiryLoop();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await expireStaleOrders();
 
-    expect(mockDocUpdate).toHaveBeenCalledTimes(2);
-    expect(mockReleaseReservedStock).toHaveBeenCalledTimes(2);
+    expect(docs[0].ref.update).toHaveBeenCalledTimes(1);
+    expect(docs[1].ref.update).toHaveBeenCalledTimes(1);
+    expect(releaseReservedStock).toHaveBeenCalledTimes(2);
+    expect(processRefund).toHaveBeenCalledTimes(2);
   });
 });
