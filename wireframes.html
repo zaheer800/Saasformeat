@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fresh Meat Shop — Wireframes</title>
+<style>
+/* ── Layout ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+       background: #1a1a2e; min-height: 100vh; padding: 24px 16px; }
+h1 { color: #fff; text-align: center; font-size: 18px; margin-bottom: 24px;
+     letter-spacing: 1px; text-transform: uppercase; opacity: .7; }
+.frames { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+
+/* ── Phone shell ── */
+.phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.phone-label { color: #aaa; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; }
+.phone { width: 375px; background: #f8f4ef; border-radius: 40px;
+         border: 8px solid #222; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+         overflow: hidden; position: relative; min-height: 700px;
+         display: flex; flex-direction: column; }
+
+/* ── Step nav (above phone content) ── */
+.step-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px;
+            background: #111; border-bottom: 1px solid #333; flex-shrink: 0; }
+.step-btn { font-size: 10px; padding: 4px 8px; border-radius: 20px;
+            border: 1px solid #444; background: #222; color: #888; cursor: pointer; }
+.step-btn.active { background: #C0451A; color: #fff; border-color: #C0451A; }
+
+/* ── Shared screen ── */
+.screen { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* ════════════════════════════════
+   CUSTOMER STYLES
+════════════════════════════════ */
+.chat-header { background: #C0451A; padding: 12px 16px;
+               display: flex; align-items: center; justify-content: space-between;
+               flex-shrink: 0; }
+.shop-name { color: #fff; font-size: 14px; font-weight: 700; }
+.shop-sub  { color: rgba(255,255,255,.65); font-size: 11px; }
+.badge.green { background: #22c55e; color: #fff; font-size: 10px;
+               padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+
+.messages { flex: 1; overflow-y: auto; padding: 12px 12px 4px;
+            display: flex; flex-direction: column; gap: 8px; background: #FDF6EC; }
+.bubble { max-width: 78%; padding: 10px 13px; border-radius: 18px;
+          font-size: 13px; line-height: 1.45; }
+.bubble.bot  { background: #fff; color: #1a1a1a; border-bottom-left-radius: 4px;
+               align-self: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.bubble.user { background: #C0451A; color: #fff; border-bottom-right-radius: 4px;
+               align-self: flex-end; }
+.bubble.cart-bubble { white-space: pre-line; }
+
+/* Order card in chat */
+.order-card-msg { background: #fff; border-radius: 14px; padding: 12px 14px;
+                  margin: 0 4px; box-shadow: 0 2px 8px rgba(0,0,0,.1);
+                  font-size: 12px; }
+.oc-header { font-weight: 700; font-size: 13px; color: #C0451A; margin-bottom: 8px; }
+.oc-items { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.oc-row { display: flex; justify-content: space-between; color: #555; }
+.oc-row.total { font-weight: 700; color: #1a1a1a; font-size: 13px;
+                border-top: 1px solid #eee; padding-top: 6px; margin-top: 4px; }
+.oc-divider { height: 1px; background: #eee; margin: 6px 0; }
+.pay-link { display: block; margin-top: 10px; color: #C0451A; font-weight: 600;
+            text-decoration: underline; cursor: pointer; font-size: 12px; }
+
+.quick-replies { padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px;
+                 background: #FDF6EC; flex-shrink: 0; }
+.qr-btn { padding: 9px 14px; border-radius: 20px; border: 1.5px solid #C0451A;
+          color: #C0451A; background: #fff; font-size: 12px; font-weight: 600;
+          cursor: pointer; transition: all .15s; }
+.qr-btn.full    { width: 100%; text-align: center; }
+.qr-btn.primary { background: #C0451A; color: #fff; }
+.qr-btn:hover   { background: #C0451A; color: #fff; }
+.qr-btn[disabled] { opacity: .4; cursor: not-allowed; }
+
+.chat-input-bar { display: flex; gap: 8px; padding: 8px 10px 12px;
+                  background: #fff; border-top: 1px solid #eee; flex-shrink: 0; }
+.chat-input { flex: 1; padding: 10px 14px; border-radius: 20px; border: 1.5px solid #e5e7eb;
+              font-size: 13px; outline: none; background: #f9fafb; }
+.chat-input:disabled { opacity: .4; }
+.send-btn { width: 40px; height: 40px; border-radius: 50%; background: #C0451A;
+            color: #fff; border: none; font-size: 14px; cursor: pointer; flex-shrink: 0; }
+.send-btn:disabled { opacity: .4; }
+
+/* Weight selector */
+.weight-panel { background: #fff; padding: 12px; border-top: 1px solid #eee; flex-shrink: 0; }
+.weight-title { font-size: 10px; font-weight: 700; color: #888; letter-spacing: 1px;
+                text-align: center; margin-bottom: 8px; }
+.weight-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.w-btn { padding: 10px 4px; border-radius: 12px; border: 1.5px solid #e5e7eb;
+         background: #fff; font-size: 12px; font-weight: 600; cursor: pointer;
+         text-align: center; transition: all .15s; line-height: 1.3; }
+.w-btn:hover { border-color: #C0451A; color: #C0451A; }
+.w-btn.custom { color: #888; border-style: dashed; }
+.w-price { font-size: 10px; font-weight: 400; color: #888; }
+
+/* Tracking page */
+.track-page { flex: 1; overflow-y: auto; padding: 16px; background: #FDF6EC;
+              display: flex; flex-direction: column; gap: 12px; }
+.track-top { }
+.track-brand { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #999; }
+.track-id { font-size: 20px; font-weight: 800; color: #1a1a1a; }
+.status-card { background: #fff; border-radius: 16px; padding: 20px;
+               text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.status-icon { font-size: 36px; margin-bottom: 6px; }
+.status-label { font-weight: 700; font-size: 15px; color: #1a1a1a; }
+.progress-card { background: #fff; border-radius: 16px; padding: 16px;
+                 box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.prog-steps { display: flex; align-items: center; }
+.prog-step { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+.prog-dot { width: 26px; height: 26px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 10px;
+            font-weight: 700; background: #e5e7eb; color: #999; }
+.prog-dot.filled { background: #C0451A; color: #fff; }
+.prog-lbl { font-size: 8px; color: #999; text-align: center; width: 36px; line-height: 1.2; }
+.prog-line { flex: 1; height: 2px; background: #e5e7eb; }
+.prog-line.filled { background: #C0451A; }
+.summary-card { background: #fff; border-radius: 16px; padding: 14px;
+                box-shadow: 0 1px 4px rgba(0,0,0,.08); font-size: 12px; }
+.sum-title { font-weight: 700; font-size: 13px; margin-bottom: 10px; color: #1a1a1a; }
+.sum-row { display: flex; justify-content: space-between; padding: 3px 0; color: #555; }
+.sum-row.muted { color: #888; }
+.sum-row.accent { color: #C0451A; }
+.sum-row.bold { font-weight: 700; color: #1a1a1a; }
+.sum-divider { height: 1px; background: #eee; margin: 6px 0; }
+.cancel-btn { padding: 14px; border-radius: 14px; border: 1.5px solid #fca5a5;
+              color: #ef4444; background: #fff; font-size: 13px; font-weight: 600;
+              cursor: pointer; }
+
+/* ════════════════════════════════
+   ADMIN STYLES
+════════════════════════════════ */
+.login-page { flex: 1; background: #FDF6EC; display: flex; flex-direction: column;
+              align-items: center; justify-content: center; padding: 24px; }
+.login-icon  { font-size: 48px; margin-bottom: 8px; }
+.login-title { font-size: 18px; font-weight: 800; color: #1a1a1a; }
+.login-sub   { font-size: 12px; color: #888; margin-bottom: 24px; }
+.login-card  { background: #fff; border-radius: 20px; padding: 20px;
+               width: 100%; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.login-label { font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 8px; }
+.login-input { width: 100%; padding: 12px 16px; border-radius: 14px; border: none;
+               background: #f3f4f6; font-size: 14px; outline: none; margin-bottom: 14px; }
+.login-input.otp { text-align: center; letter-spacing: 8px; font-size: 20px; font-weight: 700; }
+.login-btn   { width: 100%; padding: 14px; border-radius: 14px; border: none;
+               background: #C0451A; color: #fff; font-size: 14px; font-weight: 700;
+               cursor: pointer; }
+.change-num-btn { width: 100%; padding: 10px; border: none; background: none;
+                  color: #aaa; font-size: 12px; cursor: pointer; margin-top: 6px; }
+
+.admin-shell { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.admin-header { background: #C0451A; padding: 12px 16px;
+                display: flex; justify-content: space-between; align-items: center;
+                flex-shrink: 0; }
+.admin-shop  { color: #fff; font-size: 14px; font-weight: 700; }
+.admin-sub   { color: rgba(255,255,255,.65); font-size: 11px; }
+.admin-header-right { display: flex; gap: 8px; align-items: center; }
+.shop-toggle { padding: 5px 12px; border-radius: 20px; border: none; font-size: 11px;
+               font-weight: 700; cursor: pointer; }
+.shop-toggle.open { background: #22c55e; color: #fff; }
+.logout-btn  { background: none; border: none; color: rgba(255,255,255,.6);
+               font-size: 11px; cursor: pointer; }
+
+.stats-bar { display: flex; gap: 8px; padding: 12px; background: #fff;
+             border-bottom: 1px solid #eee; flex-shrink: 0; }
+.stat-box  { flex: 1; background: #f9fafb; border-radius: 12px; padding: 10px 8px;
+             text-align: center; }
+.stat-box.warn { background: #fef3c7; }
+.stat-num  { font-size: 18px; font-weight: 800; color: #1a1a1a; }
+.stat-lbl  { font-size: 10px; color: #888; margin-top: 2px; }
+
+.admin-tabs { display: flex; background: #fff; border-bottom: 1px solid #eee; flex-shrink: 0; }
+.tab-btn { flex: 1; padding: 12px 4px; border: none; background: none;
+           font-size: 12px; font-weight: 600; color: #aaa; border-bottom: 2px solid transparent;
+           cursor: pointer; transition: all .15s; }
+.tab-btn.active { color: #C0451A; border-bottom-color: #C0451A; }
+
+.tab-content { display: none; overflow-y: auto; flex: 1; padding: 12px; background: #f3f4f6; }
+.tab-content.active { display: block; }
+
+/* Order cards (admin) */
+.order-card { background: #fff; border-radius: 14px; overflow: hidden;
+              margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.oc-top { display: flex; justify-content: space-between; align-items: center;
+          padding: 10px 12px; border-bottom: 1px solid #f3f4f6; }
+.oc-id   { font-size: 13px; font-weight: 700; color: #1a1a1a; }
+.oc-time { font-size: 10px; color: #aaa; }
+.status-badge { font-size: 10px; font-weight: 700; padding: 3px 10px;
+                border-radius: 20px; }
+.status-badge.pending   { background: #fef3c7; color: #92400e; }
+.status-badge.accepted  { background: #dbeafe; color: #1e40af; }
+.status-badge.preparing { background: #ffedd5; color: #9a3412; }
+.status-badge.ready     { background: #f3e8ff; color: #6b21a8; }
+.status-badge.dispatched{ background: #e0e7ff; color: #3730a3; }
+.status-badge.delivered { background: #dcfce7; color: #166534; }
+.status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+.oc-customer { padding: 6px 12px; background: #f9fafb; font-size: 11px; color: #666; }
+.oc-items-list { padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+.oci { display: flex; justify-content: space-between; font-size: 12px; color: #444; }
+.oc-pricing { padding: 6px 12px 2px; font-size: 11px; color: #888;
+              border-top: 1px solid #f3f4f6; }
+.oc-payment { padding: 4px 12px 8px; }
+.pay-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; }
+.pay-badge.paid { background: #dcfce7; color: #166534; }
+.pay-badge.pending { background: #f3f4f6; color: #888; }
+.oc-actions { display: flex; gap: 6px; padding: 6px 12px 12px; }
+.action-btn { flex: 1; padding: 10px 8px; border-radius: 12px; border: none;
+              font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; }
+.action-btn.accept    { background: #22c55e; color: #fff; }
+.action-btn.reject    { background: #fee2e2; color: #ef4444; }
+.action-btn.preparing { background: #f97316; color: #fff; }
+.action-btn.ready     { background: #a855f7; color: #fff; }
+.action-btn.dispatch  { background: #C0451A; color: #fff; flex: 0; padding: 10px 14px; }
+.action-btn.delivered { background: #16a34a; color: #fff; }
+.assign-row { display: flex; gap: 6px; padding: 6px 12px 12px; }
+.assign-input { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #e5e7eb;
+                font-size: 11px; outline: none; background: #f9fafb; }
+.cancel-reason { padding: 4px 12px 10px; font-size: 11px; color: #ef4444; }
+
+/* Stock panel */
+.restock-btn { width: 100%; padding: 12px; border-radius: 12px; border: 1.5px dashed #f97316;
+               background: #fff7ed; color: #ea580c; font-size: 12px; font-weight: 700;
+               cursor: pointer; margin-bottom: 14px; }
+.stock-section-title { font-size: 10px; font-weight: 700; letter-spacing: 1px;
+                       text-transform: uppercase; margin: 10px 0 6px; }
+.stock-section-title.red    { color: #dc2626; }
+.stock-section-title.orange { color: #ea580c; }
+.stock-section-title.green2 { color: #16a34a; }
+.stock-item { background: #fff; border-radius: 12px; padding: 10px 12px;
+              display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+              box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.si-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.si-dot.red    { background: #dc2626; }
+.si-dot.orange { background: #f97316; }
+.si-dot.green2 { background: #22c55e; }
+.si-name { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+.si-detail { font-size: 10px; color: #888; margin-top: 2px; }
+
+/* Restock modal */
+.modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.5);
+                 display: flex; align-items: center; justify-content: center;
+                 z-index: 100; padding: 20px; }
+.modal-card { background: #fff; border-radius: 20px; padding: 20px; width: 100%; }
+.modal-title { font-size: 16px; font-weight: 800; color: #1a1a1a; margin-bottom: 2px; }
+.modal-sub   { font-size: 11px; color: #888; margin-bottom: 14px; }
+.modal-row   { display: flex; justify-content: space-between; align-items: center;
+               margin-bottom: 10px; font-size: 12px; color: #444; }
+.modal-input-wrap { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #888; }
+.modal-input { width: 70px; padding: 6px 10px; border-radius: 10px;
+               border: 1.5px solid #e5e7eb; font-size: 13px; text-align: right; outline: none; }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.modal-cancel { flex: 1; padding: 12px; border-radius: 12px; border: 1.5px solid #e5e7eb;
+                background: #fff; color: #888; font-size: 13px; font-weight: 600; cursor: pointer; }
+.modal-save   { flex: 2; padding: 12px; border-radius: 12px; border: none;
+                background: #C0451A; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Fresh Meat Shop — Interactive Wireframes</h1>
+
+<div class="frames">
+
+  <!-- ══════════ CUSTOMER PHONE ══════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label">Customer App — 9 screens</div>
+    <div class="phone">
+      <div class="step-nav" id="cust-nav">
+        <button class="step-btn active" onclick="custStep(0)">Welcome</button>
+        <button class="step-btn" onclick="custStep(1)">Category</button>
+        <button class="step-btn" onclick="custStep(2)">Cut</button>
+        <button class="step-btn" onclick="custStep(3)">Weight</button>
+        <button class="step-btn" onclick="custStep(4)">Cart</button>
+        <button class="step-btn" onclick="custStep(5)">Details</button>
+        <button class="step-btn" onclick="custStep(6)">Payment</button>
+        <button class="step-btn" onclick="custStep(7)">Confirmed</button>
+        <button class="step-btn" onclick="custStep(8)">Tracking</button>
+      </div>
+
+      <!-- S0: Welcome -->
+      <div class="screen active" id="c0">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble bot">Welcome to <strong>Fresh Meat Shop!</strong> 🥩<br>What would you like to order today?</div>
+        </div>
+        <div class="quick-replies">
+          <button class="qr-btn">🐔 Chicken</button>
+          <button class="qr-btn">🐑 Mutton</button>
+          <button class="qr-btn">🐟 Fish</button>
+          <button class="qr-btn">🥚 Eggs</button>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type here..." disabled>
+          <button class="send-btn" disabled>➤</button>
+        </div>
+      </div>
+
+      <!-- S1: Items -->
+      <div class="screen" id="c1">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble bot">Welcome to <strong>Fresh Meat Shop!</strong> 🥩<br>What would you like to order today?</div>
+          <div class="bubble user">🐔 Chicken</div>
+          <div class="bubble bot">Here's our <strong>Chicken</strong> selection:</div>
+        </div>
+        <div class="quick-replies">
+          <button class="qr-btn full">Broiler Chicken — ₹180/kg</button>
+          <button class="qr-btn full">Country Chicken — ₹320/kg</button>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type here..." disabled>
+          <button class="send-btn" disabled>➤</button>
+        </div>
+      </div>
+
+      <!-- S2: Cut -->
+      <div class="screen" id="c2">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble user">🐔 Chicken</div>
+          <div class="bubble bot">Here's our <strong>Chicken</strong> selection:</div>
+          <div class="bubble user">Broiler Chicken — ₹180/kg</div>
+          <div class="bubble bot">How would you like your <strong>Broiler Chicken</strong> cut?</div>
+        </div>
+        <div class="quick-replies">
+          <button class="qr-btn">Full Bird</button>
+          <button class="qr-btn">Curry Cut</button>
+          <button class="qr-btn">Boneless</button>
+          <button class="qr-btn">Keema (+₹20/kg)</button>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type here..." disabled>
+          <button class="send-btn" disabled>➤</button>
+        </div>
+      </div>
+
+      <!-- S3: Weight -->
+      <div class="screen" id="c3">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble user">Curry Cut</div>
+          <div class="bubble bot">How much <strong>Broiler Chicken (Curry Cut)</strong> would you like?</div>
+        </div>
+        <div class="weight-panel">
+          <div class="weight-title">SELECT WEIGHT</div>
+          <div class="weight-grid">
+            <button class="w-btn">250g<br><span class="w-price">₹45</span></button>
+            <button class="w-btn">500g<br><span class="w-price">₹90</span></button>
+            <button class="w-btn">1 kg<br><span class="w-price">₹180</span></button>
+            <button class="w-btn">1.5 kg<br><span class="w-price">₹270</span></button>
+            <button class="w-btn">2 kg<br><span class="w-price">₹360</span></button>
+            <button class="w-btn custom">Custom</button>
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type here..." disabled>
+          <button class="send-btn" disabled>➤</button>
+        </div>
+      </div>
+
+      <!-- S4: Cart -->
+      <div class="screen" id="c4">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble user">500g Broiler Chicken (Curry Cut)</div>
+          <div class="bubble bot">Added! 500g Chicken (Curry Cut) — <strong>₹90</strong><br>Cart total: ₹90</div>
+          <div class="bubble user">🛒 View cart (₹265)</div>
+          <div class="bubble bot">
+            <strong>Your cart:</strong><br><br>
+            1. Chicken (Curry Cut) — 500g — ₹90<br>
+            2. Mutton (Curry) — 250g — ₹175<br><br>
+            <strong>Total: ₹265</strong>
+          </div>
+        </div>
+        <div class="quick-replies">
+          <button class="qr-btn full">+ Add more items</button>
+          <button class="qr-btn full primary">✓ Proceed to order</button>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type here..." disabled>
+          <button class="send-btn" disabled>➤</button>
+        </div>
+      </div>
+
+      <!-- S5: Details -->
+      <div class="screen" id="c5">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble bot">What's your name?</div>
+          <div class="bubble user">Raju</div>
+          <div class="bubble bot">And your phone number? (10 digits)</div>
+          <div class="bubble user">9876543210</div>
+          <div class="bubble bot">Please share your delivery address.<br><br>Tap the button below to share your live location, or type your address.</div>
+        </div>
+        <div class="quick-replies">
+          <button class="qr-btn full">📍 Share my location</button>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type your address...">
+          <button class="send-btn">➤</button>
+        </div>
+      </div>
+
+      <!-- S6: Payment -->
+      <div class="screen" id="c6">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble user">📍 Shared live location</div>
+          <div class="bubble bot">Getting your location... ⏳</div>
+          <div class="bubble bot">Delivery charge: <strong>₹35</strong> (3.2 km, ~18 min)<br><br>Payment method: <strong>COD only.</strong><br>A <strong>₹20 token advance</strong> is required to confirm your order.</div>
+        </div>
+        <div class="quick-replies">
+          <button class="qr-btn full primary">💵 Cash on Delivery (COD)</button>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type here..." disabled>
+          <button class="send-btn" disabled>➤</button>
+        </div>
+      </div>
+
+      <!-- S7: Confirmed -->
+      <div class="screen" id="c7">
+        <div class="chat-header">
+          <div><div class="shop-name">🥩 Fresh Meat Shop</div><div class="shop-sub">Hyderabad</div></div>
+          <span class="badge green">● Open</span>
+        </div>
+        <div class="messages">
+          <div class="bubble user">💵 Cash on Delivery (COD)</div>
+          <div class="bubble bot">Placing your order... ⏳</div>
+          <div class="bubble bot">Order placed! ✅</div>
+          <div class="order-card-msg">
+            <div class="oc-header">#ORD-ABC123</div>
+            <div class="oc-items">
+              <div class="oc-row"><span>Chicken (Curry Cut) — 500g</span><span>₹90</span></div>
+              <div class="oc-row"><span>Mutton (Curry) — 250g</span><span>₹175</span></div>
+            </div>
+            <div class="oc-divider"></div>
+            <div class="oc-row"><span>Items subtotal</span><span>₹265</span></div>
+            <div class="oc-row"><span>Delivery charge</span><span>₹35</span></div>
+            <div class="oc-row"><span>COD token</span><span>₹20</span></div>
+            <div class="oc-row total"><span>Total</span><span>₹320</span></div>
+            <a class="pay-link">Pay ₹20 token advance →</a>
+          </div>
+        </div>
+        <div class="quick-replies">
+          <button class="qr-btn full">📦 Track order</button>
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" placeholder="Type here..." disabled>
+          <button class="send-btn" disabled>➤</button>
+        </div>
+      </div>
+
+      <!-- S8: Tracking -->
+      <div class="screen" id="c8">
+        <div class="track-page">
+          <div class="track-top">
+            <div class="track-brand">Fresh Meat Shop</div>
+            <div class="track-id">Order #ABC123</div>
+          </div>
+          <div class="status-card">
+            <div class="status-icon">⏳</div>
+            <div class="status-label">Order Received</div>
+          </div>
+          <div class="progress-card">
+            <div class="prog-steps">
+              <div class="prog-step"><div class="prog-dot filled">✓</div><div class="prog-lbl">Rcvd</div></div>
+              <div class="prog-line"></div>
+              <div class="prog-step"><div class="prog-dot">2</div><div class="prog-lbl">Accptd</div></div>
+              <div class="prog-line"></div>
+              <div class="prog-step"><div class="prog-dot">3</div><div class="prog-lbl">Prep</div></div>
+              <div class="prog-line"></div>
+              <div class="prog-step"><div class="prog-dot">4</div><div class="prog-lbl">Ready</div></div>
+              <div class="prog-line"></div>
+              <div class="prog-step"><div class="prog-dot">5</div><div class="prog-lbl">Out</div></div>
+              <div class="prog-line"></div>
+              <div class="prog-step"><div class="prog-dot">6</div><div class="prog-lbl">Done</div></div>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="sum-title">Order Summary</div>
+            <div class="sum-row"><span>Chicken (Curry Cut) — 500g</span><span>₹90</span></div>
+            <div class="sum-row"><span>Mutton — 250g</span><span>₹175</span></div>
+            <div class="sum-divider"></div>
+            <div class="sum-row muted"><span>Items subtotal</span><span>₹265</span></div>
+            <div class="sum-row muted"><span>Delivery charge</span><span>₹35</span></div>
+            <div class="sum-row accent"><span>COD token paid</span><span>−₹20</span></div>
+            <div class="sum-divider"></div>
+            <div class="sum-row bold"><span>Amount at door</span><span>₹280</span></div>
+          </div>
+          <button class="cancel-btn">Cancel order (free)</button>
+        </div>
+      </div>
+
+    </div><!-- /phone -->
+  </div><!-- /phone-wrap -->
+
+
+  <!-- ══════════ ADMIN PHONE ══════════ -->
+  <div class="phone-wrap">
+    <div class="phone-label">Admin App — 4 views</div>
+    <div class="phone">
+      <div class="step-nav">
+        <button class="step-btn active" onclick="adminView('a-login')">Login</button>
+        <button class="step-btn" onclick="adminView('a-dash'); adminTab('orders-tab')">Orders</button>
+        <button class="step-btn" onclick="adminView('a-dash'); adminTab('stock-tab')">Stock</button>
+        <button class="step-btn" onclick="adminView('a-dash'); adminTab('history-tab')">History</button>
+      </div>
+
+      <!-- Login -->
+      <div class="screen active" id="a-login">
+        <div class="login-page">
+          <div class="login-icon">🥩</div>
+          <div class="login-title">Fresh Meat Shop</div>
+          <div class="login-sub">Admin Login</div>
+          <div class="login-card" id="otp-step1">
+            <label class="login-label">Admin Phone Number</label>
+            <input class="login-input" placeholder="Enter phone number" type="tel">
+            <button class="login-btn" onclick="showOTPStep()">Send OTP</button>
+          </div>
+          <div class="login-card" id="otp-step2" style="display:none">
+            <label class="login-label">OTP sent to +91 98765...</label>
+            <input class="login-input otp" placeholder="1  2  3  4  5  6" type="number">
+            <button class="login-btn">Verify OTP</button>
+            <button class="change-num-btn" onclick="showPhoneStep()">Change number</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="screen" id="a-dash">
+        <div class="admin-shell">
+          <div class="admin-header">
+            <div>
+              <div class="admin-shop">Fresh Meat Shop</div>
+              <div class="admin-sub">Admin Dashboard</div>
+            </div>
+            <div class="admin-header-right">
+              <button class="shop-toggle open">● Open</button>
+              <button class="logout-btn">Logout</button>
+            </div>
+          </div>
+
+          <div class="stats-bar">
+            <div class="stat-box"><div class="stat-num">3</div><div class="stat-lbl">Active</div></div>
+            <div class="stat-box"><div class="stat-num">₹1,240</div><div class="stat-lbl">Revenue</div></div>
+            <div class="stat-box warn"><div class="stat-num">2</div><div class="stat-lbl">Low Stock</div></div>
+          </div>
+
+          <div class="admin-tabs" id="admin-tab-bar">
+            <button class="tab-btn active" onclick="adminTab('orders-tab')">Orders (3)</button>
+            <button class="tab-btn" onclick="adminTab('stock-tab')">Stock</button>
+            <button class="tab-btn" onclick="adminTab('history-tab')">History</button>
+          </div>
+
+          <!-- Orders tab -->
+          <div class="tab-content active" id="orders-tab">
+            <!-- PENDING -->
+            <div class="order-card">
+              <div class="oc-top">
+                <div><div class="oc-id">#ABC123</div><div class="oc-time">12:34 pm</div></div>
+                <span class="status-badge pending">PENDING</span>
+              </div>
+              <div class="oc-customer">Raju · 9876543210 · 12 MG Road · 3.2 km</div>
+              <div class="oc-items-list">
+                <div class="oci"><span>Broiler Chicken (Curry Cut) — 500g</span><span>₹90</span></div>
+                <div class="oci"><span>Mutton (Curry) — 250g</span><span>₹175</span></div>
+              </div>
+              <div class="oc-pricing">Delivery ₹35 · Token ₹20 · <strong>Total ₹320</strong></div>
+              <div class="oc-payment"><span class="pay-badge paid">✓ token_paid</span></div>
+              <div class="oc-actions">
+                <button class="action-btn accept">✅ Accept</button>
+                <button class="action-btn reject">✕ Reject</button>
+              </div>
+            </div>
+
+            <!-- ACCEPTED -->
+            <div class="order-card">
+              <div class="oc-top">
+                <div><div class="oc-id">#DEF456</div><div class="oc-time">12:20 pm</div></div>
+                <span class="status-badge accepted">ACCEPTED</span>
+              </div>
+              <div class="oc-customer">Priya · 9123456780 · 4 Banjara Hills · 2.1 km</div>
+              <div class="oc-items-list">
+                <div class="oci"><span>Country Chicken (Boneless) — 1 kg</span><span>₹320</span></div>
+              </div>
+              <div class="oc-pricing">Delivery ₹20 · Token ₹20 · <strong>Total ₹360</strong></div>
+              <div class="oc-payment"><span class="pay-badge paid">✓ token_paid</span></div>
+              <div class="oc-actions">
+                <button class="action-btn preparing">🔪 Start Preparing</button>
+              </div>
+            </div>
+
+            <!-- PREPARING -->
+            <div class="order-card">
+              <div class="oc-top">
+                <div><div class="oc-id">#GHI789</div><div class="oc-time">12:10 pm</div></div>
+                <span class="status-badge preparing">PREPARING</span>
+              </div>
+              <div class="oc-customer">Suresh · 9988776655 · 8 Jubilee Hills · 4.5 km</div>
+              <div class="oc-items-list">
+                <div class="oci"><span>Rohu Fish (Full) — 500g</span><span>₹80</span></div>
+                <div class="oci"><span>Mutton (Keema) — 500g</span><span>₹375</span></div>
+              </div>
+              <div class="oc-pricing">Delivery ₹50 · Token ₹20 · <strong>Total ₹525</strong></div>
+              <div class="oc-payment"><span class="pay-badge paid">✓ token_paid</span></div>
+              <div class="oc-actions">
+                <button class="action-btn ready">📦 Mark Ready</button>
+              </div>
+            </div>
+
+            <!-- READY -->
+            <div class="order-card">
+              <div class="oc-top">
+                <div><div class="oc-id">#JKL012</div><div class="oc-time">11:55 am</div></div>
+                <span class="status-badge ready">READY</span>
+              </div>
+              <div class="oc-customer">Kavya · 9871234560 · 2 Madhapur · 1.8 km</div>
+              <div class="oc-items-list">
+                <div class="oci"><span>Broiler Chicken (Full Bird) — 1 kg</span><span>₹180</span></div>
+              </div>
+              <div class="oc-pricing">Delivery ₹20 · Token ₹20 · <strong>Total ₹220</strong></div>
+              <div class="oc-payment"><span class="pay-badge paid">✓ token_paid</span></div>
+              <div class="assign-row">
+                <input class="assign-input" placeholder="Delivery boy phone (optional)">
+                <button class="action-btn dispatch">🚴 Dispatch</button>
+              </div>
+            </div>
+
+            <!-- DISPATCHED -->
+            <div class="order-card">
+              <div class="oc-top">
+                <div><div class="oc-id">#MNO345</div><div class="oc-time">11:40 am</div></div>
+                <span class="status-badge dispatched">DISPATCHED</span>
+              </div>
+              <div class="oc-customer">Arun · 9000112233 · 6 Kondapur · 5.1 km</div>
+              <div class="oc-items-list">
+                <div class="oci"><span>Mutton (Curry Cut) — 1 kg</span><span>₹700</span></div>
+              </div>
+              <div class="oc-pricing">Delivery ₹50 · Token ₹20 · <strong>Total ₹770</strong></div>
+              <div class="oc-payment"><span class="pay-badge paid">✓ token_paid</span></div>
+              <div class="oc-actions">
+                <button class="action-btn delivered">🎉 Mark Delivered</button>
+              </div>
+            </div>
+          </div><!-- /orders-tab -->
+
+          <!-- Stock tab -->
+          <div class="tab-content" id="stock-tab">
+            <button class="restock-btn" onclick="document.getElementById('restock-modal').style.display='flex'">⚠ Restock for today</button>
+
+            <div class="stock-section-title red">OUT OF STOCK</div>
+            <div class="stock-item">
+              <div class="si-dot red"></div>
+              <div class="si-info"><div class="si-name">Mutton</div><div class="si-detail">Available: 0g · Reserved: 0g · Sold: 2 kg</div></div>
+            </div>
+
+            <div class="stock-section-title orange">LOW STOCK</div>
+            <div class="stock-item">
+              <div class="si-dot orange"></div>
+              <div class="si-info"><div class="si-name">Rohu Fish</div><div class="si-detail">Available: 300g · Reserved: 200g · Sold: 1 kg</div></div>
+            </div>
+
+            <div class="stock-section-title green2">IN STOCK</div>
+            <div class="stock-item">
+              <div class="si-dot green2"></div>
+              <div class="si-info"><div class="si-name">Broiler Chicken</div><div class="si-detail">Available: 4.5 kg · Reserved: 500g · Sold: 2 kg</div></div>
+            </div>
+            <div class="stock-item">
+              <div class="si-dot green2"></div>
+              <div class="si-info"><div class="si-name">Country Chicken</div><div class="si-detail">Available: 2 kg · Reserved: 0g · Sold: 1 kg</div></div>
+            </div>
+            <div class="stock-item">
+              <div class="si-dot green2"></div>
+              <div class="si-info"><div class="si-name">Eggs</div><div class="si-detail">Available: 30 pcs</div></div>
+            </div>
+
+            <!-- Restock modal -->
+            <div class="modal-overlay" id="restock-modal" style="display:none" onclick="this.style.display='none'">
+              <div class="modal-card" onclick="event.stopPropagation()">
+                <div class="modal-title">Morning Restock</div>
+                <div class="modal-sub">Set today's stock (grams)</div>
+                <div class="modal-row"><label>Broiler Chicken</label><div class="modal-input-wrap"><input type="number" placeholder="0" class="modal-input"> g</div></div>
+                <div class="modal-row"><label>Country Chicken</label><div class="modal-input-wrap"><input type="number" placeholder="0" class="modal-input"> g</div></div>
+                <div class="modal-row"><label>Mutton</label><div class="modal-input-wrap"><input type="number" placeholder="0" class="modal-input"> g</div></div>
+                <div class="modal-row"><label>Rohu Fish</label><div class="modal-input-wrap"><input type="number" placeholder="0" class="modal-input"> g</div></div>
+                <div class="modal-row"><label>Eggs</label><div class="modal-input-wrap"><input type="number" placeholder="0" class="modal-input"> pcs</div></div>
+                <div class="modal-actions">
+                  <button class="modal-cancel" onclick="document.getElementById('restock-modal').style.display='none'">Cancel</button>
+                  <button class="modal-save">Save &amp; Open Shop</button>
+                </div>
+              </div>
+            </div>
+          </div><!-- /stock-tab -->
+
+          <!-- History tab -->
+          <div class="tab-content" id="history-tab">
+            <div class="order-card">
+              <div class="oc-top">
+                <div><div class="oc-id">#PQR678</div><div class="oc-time">11:20 am</div></div>
+                <span class="status-badge delivered">DELIVERED</span>
+              </div>
+              <div class="oc-customer">Raju · 9876543210</div>
+              <div class="oc-items-list">
+                <div class="oci"><span>Chicken (Curry Cut) — 500g</span><span>₹90</span></div>
+                <div class="oci"><span>Mutton — 250g</span><span>₹175</span></div>
+              </div>
+              <div class="oc-pricing"><strong>Total ₹320</strong> · 🎉 Delivered</div>
+            </div>
+            <div class="order-card">
+              <div class="oc-top">
+                <div><div class="oc-id">#STU901</div><div class="oc-time">10:55 am</div></div>
+                <span class="status-badge cancelled">CANCELLED</span>
+              </div>
+              <div class="oc-customer">Priya · 9123456780</div>
+              <div class="oc-items-list">
+                <div class="oci"><span>Country Chicken — 1 kg</span><span>₹320</span></div>
+              </div>
+              <div class="oc-pricing"><strong>Total ₹360</strong></div>
+              <div class="cancel-reason">✕ rejected_by_shop · ₹0 fee</div>
+            </div>
+          </div><!-- /history-tab -->
+
+        </div><!-- /admin-shell -->
+      </div><!-- /a-dash -->
+
+    </div><!-- /phone -->
+  </div><!-- /phone-wrap -->
+
+</div><!-- /frames -->
+
+<script>
+// Customer step switcher
+function custStep(n) {
+  document.querySelectorAll('#cust-nav .step-btn').forEach((b,i) => b.classList.toggle('active', i===n));
+  document.querySelectorAll('[id^="c"]').forEach(s => {
+    if (/^c\d+$/.test(s.id)) s.classList.remove('active');
+  });
+  const el = document.getElementById('c'+n);
+  if (el) { el.classList.add('active'); el.style.display='flex'; }
+  // hide others
+  for (let i=0;i<9;i++) {
+    const s = document.getElementById('c'+i);
+    if (s && i!==n) { s.classList.remove('active'); s.style.display='none'; }
+  }
+}
+
+// Admin view switcher
+function adminView(id) {
+  ['a-login','a-dash'].forEach(v => {
+    const el = document.getElementById(v);
+    if (el) { el.classList.remove('active'); el.style.display='none'; }
+  });
+  const target = document.getElementById(id);
+  if (target) { target.classList.add('active'); target.style.display='flex'; }
+  // update step-nav active
+  const labels = {login:'a-login', orders:'a-dash', stock:'a-dash', history:'a-dash'};
+}
+
+// Admin tab switcher
+function adminTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#admin-tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+  const tab = document.getElementById(tabId);
+  if (tab) tab.classList.add('active');
+  // activate corresponding button
+  const idx = {orders_tab:0,'orders-tab':0,'stock-tab':1,'history-tab':2};
+  const btns = document.querySelectorAll('#admin-tab-bar .tab-btn');
+  if (btns[idx[tabId]] !== undefined) btns[idx[tabId]].classList.add('active');
+}
+
+// OTP step toggle
+function showOTPStep()  { document.getElementById('otp-step1').style.display='none'; document.getElementById('otp-step2').style.display='block'; }
+function showPhoneStep(){ document.getElementById('otp-step2').style.display='none'; document.getElementById('otp-step1').style.display='block'; }
+
+// Init
+custStep(0);
+</script>
+</body>
+</html>
